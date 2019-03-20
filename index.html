@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
+</head>
+
+<body>
+	<canvas id="canvas" />
+</body>
+<script>
+	class Pixels {
+		constructor(imageData) {
+			this._image = imageData;
+		}
+
+		getPixel(x, y) {
+			if (Array.isArray(x)) {
+				y = x[1];
+				x = x[0];
+			}
+
+			if (x >= this._image.width) throw new Error("Invalid x: " + x);
+			if (y >= this._image.height) throw new Error("Invalid y: " + y);
+
+			let index = (y * this._image.width * 4) + (x * 4);
+			return {
+				r: this._image.data[index + 0],
+				g: this._image.data[index + 1],
+				b: this._image.data[index + 2],
+				a: this._image.data[index + 3],
+			};
+		}
+
+		setPixel(x, y, rgb) {
+			if (Array.isArray(x)) {
+				rgb = y;
+				y = x[1];
+				x = x[0];
+			}
+
+			if (x >= this._image.width) throw new Error("Invalid x: " + x);
+			if (y >= this._image.height) throw new Error("Invalid y: " + y);
+
+			let index = (y * this._image.width * 4) + (x * 4);
+
+			if (index > this._image.data.length) throw new Error("invalid position in image");
+
+			if (Array.isArray(rgb)) {
+				rgb = {
+					r: rgb[0],
+					g: rgb[1],
+					b: rgb[2],
+					a: rgb.length > 3 ? rgb[3] : 255
+				}
+			}
+			// console.log(rgb);
+			this._image.data[index + 0] = rgb.r;
+			this._image.data[index + 1] = rgb.g;
+			this._image.data[index + 2] = rgb.b;
+			this._image.data[index + 3] = rgb.a;
+		}
+
+		getImage() {
+			return this._image;
+		}
+
+		swap(x1, y1, x2, y2) {
+			const p1 = this.getPixel(x1, y1);
+			const p2 = this.getPixel(x2, y2);
+
+			this.setPixel(x1, y1, p2);
+			this.setPixel(x2, y2, p1);
+		}
+
+		fourWaySwap(p1, p2, p3, p4) {
+			console.log("fourWaySwap", p1, p2, p3, p4);
+			let c1 = this.getPixel(p1);
+			let c2 = this.getPixel(p2);
+			let c3 = this.getPixel(p3);
+			let c4 = this.getPixel(p4);
+ 
+			this.setPixel(p2, c1);
+			this.setPixel(p3, c2);
+			this.setPixel(p4, c3);
+			this.setPixel(p1, c4);
+		}
+	}
+
+	var canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	const img1 = new Image();
+
+	// //drawing of the test image - img1 
+	img1.onload = function () {
+		img1.width = 500;
+		img1.height = 500;
+
+		canvas.width = img1.width;
+		canvas.height = img1.height;
+		// 	//draw background image
+		//ctx.drawImage(img1, 0, 0, img1.width, img1.height);
+		// 	//draw a box over the top
+		//ctx.fillStyle = "rgba(200, 0, 0, 0.5)";
+		//ctx.fillRect(0, 0, 500, 500);
+		canvas.width = img1.width;
+		canvas.height = img1.height;
+
+		ctx.drawImage(img1, 0, 0, img1.width, img1.height);
+
+		var imgd = ctx.getImageData(0, 0, img1.width, img1.height);
+
+		var pixels = new Pixels(imgd);
+		for (var i = 0; i < imgd.width; i++) {
+			for (var j = 0; j < imgd.height; j++) {
+				const { r, g, b } = pixels.getPixel(i, j);
+				if (r > 230 && g > 230 && b > 230) {
+					pixels.setPixel(i, j, [255, 255, 255]);
+				}
+			}
+		}
+
+		const it = rotate(pixels);
+		setInterval(() => {
+			it.next();
+			ctx.putImageData(pixels.getImage(), 0, 0);
+
+		}, 10);
+	}
+
+	function* rotate(pixels) { 
+		for (
+			let dx = 0, width = img1.width, dy = 0, height = img1.height;
+			dx <= width;
+			width-- , dx++ , dy++ , height--) {
+
+			console.log(`square: ${dx} -> ${width}, ${dy} -> ${height}`);
+
+			for (let i = 0; i < width - 1 - dx; i++) {
+				pixels.fourWaySwap(
+					[dx + i, dy],
+					[width - 1, dy + i],
+					[width - 1 - i, height - 1],
+					[dx, height - 1 - i]);
+			}
+
+			yield;
+		}
+	}
+
+	img1.src = "sample.jpg";
+</script>
+
+</html>
